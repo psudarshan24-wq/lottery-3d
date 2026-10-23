@@ -1,0 +1,1568 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>3D Roll Number Lottery (1-50) | Anatomy & Histology of Bone</title>
+  <!-- Try local scripts first, then CDN fallbacks -->
+  <script src="three.min.js"></script>
+  <script>
+    if (typeof THREE === 'undefined') {
+      document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"><\/script>');
+    }
+  </script>
+  <script src="OrbitControls.js"></script>
+  <script>
+    if (typeof THREE !== 'undefined' && typeof THREE.OrbitControls === 'undefined') {
+      document.write('<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"><\/script>');
+    }
+  </script>
+  <script src="confetti.browser.min.js"></script>
+  <script>
+    if (typeof confetti === 'undefined') {
+      document.write('<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"><\/script>');
+    }
+  </script>
+
+  <style>
+    :root {
+      --bg-dark: #070d1e;
+      --bg-card: rgba(13, 27, 62, 0.75);
+      --border-gold: #d4af37;
+      --gold-glow: rgba(212, 175, 55, 0.45);
+      --gold-bright: #ffd700;
+      --accent-blue: #1e90ff;
+      --text-main: #ffffff;
+      --text-muted: #a5b4fc;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    body, html {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: radial-gradient(circle at 50% 30%, #10214d 0%, #081026 50%, #030611 100%);
+      font-family: 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+      color: var(--text-main);
+    }
+
+    #webgl-canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+    }
+
+    /* Top Header Bar */
+    .top-header {
+      position: absolute;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 10;
+      text-align: center;
+      background: var(--bg-card);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      padding: 12px 32px;
+      border-radius: 50px;
+      border: 1px solid rgba(212, 175, 55, 0.4);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), 0 0 20px var(--gold-glow);
+      pointer-events: auto;
+    }
+
+    .top-header h1 {
+      font-size: 1.4rem;
+      font-weight: 700;
+      letter-spacing: 1px;
+      color: var(--gold-bright);
+      text-transform: uppercase;
+      text-shadow: 0 2px 8px rgba(0,0,0,0.6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+
+    .top-header p {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-top: 2px;
+      letter-spacing: 0.5px;
+    }
+
+    /* Status Pill */
+    .status-badge {
+      position: absolute;
+      top: 24px;
+      left: 24px;
+      z-index: 10;
+      background: var(--bg-card);
+      backdrop-filter: blur(8px);
+      padding: 10px 20px;
+      border-radius: 20px;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+      font-size: 0.95rem;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .status-badge .count-tag {
+      background: linear-gradient(135deg, #d4af37, #f39c12);
+      color: #070d1e;
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-weight: 800;
+      font-size: 0.9rem;
+    }
+
+    /* Top Right Tool Buttons */
+    .top-tools {
+      position: absolute;
+      top: 24px;
+      right: 24px;
+      z-index: 10;
+      display: flex;
+      gap: 12px;
+    }
+
+    .tool-btn {
+      background: var(--bg-card);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(212, 175, 55, 0.3);
+      color: #e2e8f0;
+      padding: 10px 16px;
+      border-radius: 20px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.25s ease;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+    }
+
+    .tool-btn:hover {
+      background: rgba(30, 58, 138, 0.8);
+      border-color: var(--gold-bright);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px var(--gold-glow);
+    }
+
+    /* Bottom Control Bar */
+    .bottom-controls {
+      position: absolute;
+      bottom: 30px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      background: var(--bg-card);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      padding: 14px 28px;
+      border-radius: 60px;
+      border: 1px solid rgba(212, 175, 55, 0.5);
+      box-shadow: 0 15px 40px rgba(0, 0, 0, 0.6), 0 0 30px var(--gold-glow);
+    }
+
+    /* Big Spin & Select Button */
+    .btn-spin {
+      background: linear-gradient(135deg, #ffd700 0%, #f59e0b 50%, #d97706 100%);
+      color: #0c1427;
+      border: none;
+      padding: 18px 48px;
+      font-size: 1.35rem;
+      font-weight: 800;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      border-radius: 50px;
+      cursor: pointer;
+      box-shadow: 0 8px 25px rgba(245, 158, 11, 0.6), 0 0 20px rgba(255, 215, 0, 0.5);
+      transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      outline: none;
+    }
+
+    .btn-spin:hover:not(:disabled) {
+      transform: scale(1.06);
+      box-shadow: 0 12px 35px rgba(245, 158, 11, 0.8), 0 0 30px rgba(255, 215, 0, 0.8);
+      filter: brightness(1.08);
+    }
+
+    .btn-spin:active:not(:disabled) {
+      transform: scale(0.97);
+    }
+
+    .btn-spin:disabled {
+      background: linear-gradient(135deg, #475569 0%, #334155 100%);
+      color: #94a3b8;
+      cursor: not-allowed;
+      box-shadow: none;
+      transform: none;
+      filter: none;
+    }
+
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.08);
+      color: #ffffff;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      padding: 14px 24px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      border-radius: 40px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s ease;
+    }
+
+    .btn-secondary:hover:not(:disabled) {
+      background: rgba(255, 255, 255, 0.18);
+      border-color: var(--gold-bright);
+      transform: translateY(-2px);
+    }
+
+    .btn-secondary:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    /* Live Countdown / Phase Indicator during Spin */
+    .spin-status-indicator {
+      position: absolute;
+      top: 100px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 10;
+      background: rgba(15, 23, 42, 0.85);
+      border: 2px solid var(--gold-bright);
+      padding: 10px 28px;
+      border-radius: 30px;
+      box-shadow: 0 0 25px var(--gold-glow);
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: #fff;
+      display: none;
+      align-items: center;
+      gap: 12px;
+      animation: pulseGlow 1.2s infinite alternate;
+    }
+
+    @keyframes pulseGlow {
+      from { box-shadow: 0 0 15px rgba(255, 215, 0, 0.3); transform: translateX(-50%) scale(1); }
+      to { box-shadow: 0 0 35px rgba(255, 215, 0, 0.8); transform: translateX(-50%) scale(1.03); }
+    }
+
+    .spinner-ring {
+      width: 22px;
+      height: 22px;
+      border: 3px solid rgba(255, 255, 255, 0.3);
+      border-top-color: var(--gold-bright);
+      border-radius: 50%;
+      animation: spinAnim 0.7s linear infinite;
+    }
+
+    @keyframes spinAnim {
+      to { transform: rotate(360deg); }
+    }
+
+    /* Dramatic Winner Reveal Card */
+    .winner-overlay {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) scale(0.6);
+      opacity: 0;
+      pointer-events: none;
+      z-index: 30;
+      text-align: center;
+      transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    .winner-overlay.active {
+      transform: translate(-50%, -50%) scale(1);
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .winner-card {
+      background: radial-gradient(circle at 50% 20%, rgba(20, 35, 75, 0.95), rgba(7, 13, 30, 0.98));
+      border: 3px solid var(--gold-bright);
+      border-radius: 32px;
+      padding: 36px 60px;
+      box-shadow: 0 25px 80px rgba(0, 0, 0, 0.8), 0 0 60px var(--gold-glow), inset 0 0 30px rgba(212, 175, 55, 0.2);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+      position: relative;
+    }
+
+    .winner-tag {
+      font-size: 1.1rem;
+      letter-spacing: 3px;
+      color: #93c5fd;
+      text-transform: uppercase;
+      font-weight: 700;
+    }
+
+    .winner-roll-number {
+      font-size: 5.5rem;
+      font-weight: 900;
+      line-height: 1;
+      background: linear-gradient(180deg, #ffffff 20%, #ffd700 80%, #b45309 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      filter: drop-shadow(0 6px 16px rgba(0, 0, 0, 0.7));
+      animation: bounceNumber 1s ease;
+    }
+
+    @keyframes bounceNumber {
+      0% { transform: scale(0.3); opacity: 0; }
+      50% { transform: scale(1.2); }
+      70% { transform: scale(0.95); }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    .winner-title {
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: #ffffff;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .winner-sub {
+      font-size: 1rem;
+      color: #cbd5e1;
+      max-width: 400px;
+    }
+
+    .winner-btn-row {
+      margin-top: 15px;
+      display: flex;
+      gap: 16px;
+    }
+
+    .btn-dismiss {
+      background: linear-gradient(135deg, #d4af37, #f59e0b);
+      color: #0c1427;
+      border: none;
+      padding: 12px 32px;
+      font-size: 1.1rem;
+      font-weight: 800;
+      border-radius: 30px;
+      cursor: pointer;
+      box-shadow: 0 4px 20px rgba(245, 158, 11, 0.5);
+      transition: all 0.2s;
+    }
+
+    .btn-dismiss:hover {
+      transform: scale(1.05);
+      box-shadow: 0 6px 25px rgba(245, 158, 11, 0.7);
+    }
+
+    /* History Side Panel Drawer */
+    .history-drawer {
+      position: absolute;
+      top: 0;
+      right: -380px;
+      width: 360px;
+      height: 100%;
+      background: rgba(10, 20, 48, 0.94);
+      backdrop-filter: blur(20px);
+      border-left: 2px solid rgba(212, 175, 55, 0.4);
+      z-index: 25;
+      padding: 30px 24px;
+      display: flex;
+      flex-direction: column;
+      box-shadow: -10px 0 40px rgba(0, 0, 0, 0.6);
+      transition: right 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .history-drawer.open {
+      right: 0;
+    }
+
+    .drawer-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 18px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+      margin-bottom: 20px;
+    }
+
+    .drawer-header h2 {
+      font-size: 1.25rem;
+      color: var(--gold-bright);
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn-close-drawer {
+      background: none;
+      border: none;
+      color: #94a3b8;
+      font-size: 1.5rem;
+      cursor: pointer;
+      transition: color 0.2s;
+    }
+
+    .btn-close-drawer:hover {
+      color: #ffffff;
+    }
+
+    .history-list-container {
+      flex: 1;
+      overflow-y: auto;
+      padding-right: 6px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    /* Custom Scrollbar */
+    .history-list-container::-webkit-scrollbar {
+      width: 6px;
+    }
+    .history-list-container::-webkit-scrollbar-thumb {
+      background: rgba(212, 175, 55, 0.4);
+      border-radius: 4px;
+    }
+
+    .history-chip {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 10px 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      animation: fadeIn 0.3s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .history-chip .draw-order {
+      font-size: 0.85rem;
+      color: #94a3b8;
+    }
+
+    .history-chip .roll-num {
+      font-size: 1.3rem;
+      font-weight: 800;
+      color: var(--gold-bright);
+    }
+
+    .history-chip .ball-color-dot {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      display: inline-block;
+      margin-right: 8px;
+      vertical-align: middle;
+      border: 1px solid rgba(255,255,255,0.4);
+    }
+
+    .history-empty-msg {
+      text-align: center;
+      color: #64748b;
+      font-size: 0.95rem;
+      margin-top: 50px;
+    }
+
+    .drawer-footer {
+      padding-top: 18px;
+      border-top: 1px solid rgba(255, 255, 255, 0.15);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    /* Toast Notification */
+    .toast-msg {
+      position: absolute;
+      bottom: 120px;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid var(--gold-bright);
+      color: #ffffff;
+      padding: 10px 24px;
+      border-radius: 20px;
+      font-size: 0.95rem;
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.3s ease;
+      z-index: 40;
+    }
+    .toast-msg.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* Mobile / Responsive */
+    @media (max-width: 768px) {
+      .top-header { width: 90%; padding: 10px 16px; }
+      .top-header h1 { font-size: 1rem; }
+      .top-header p { display: none; }
+      .status-badge { top: auto; bottom: 100px; left: 16px; font-size: 0.8rem; }
+      .bottom-controls { width: 92%; padding: 10px 16px; gap: 10px; }
+      .btn-spin { padding: 14px 28px; font-size: 1.1rem; }
+      .winner-card { padding: 24px 30px; }
+      .winner-roll-number { font-size: 4rem; }
+      .history-drawer { width: 100%; right: -100%; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- WebGL Render Canvas -->
+  <div id="webgl-canvas"></div>
+
+  <!-- Header -->
+  <header class="top-header">
+    <h1>🏛️ 3D Roll Number Lottery</h1>
+    <p>Anatomy & Histology of Bone — Interactive Classroom Selection (1–50)</p>
+  </header>
+
+  <!-- Status / Remaining Pool Badge -->
+  <div class="status-badge">
+    <span>Pool: <strong>1 to 50</strong></span>
+    <span class="count-tag" id="remaining-count-badge">50 / 50 Remaining</span>
+  </div>
+
+  <!-- Quick Tools (Top Right) -->
+  <div class="top-tools">
+    <button class="tool-btn" id="btn-toggle-sound">🔊 Sound: ON</button>
+    <button class="tool-btn" id="btn-toggle-history">📋 History (<span id="history-counter">0</span>)</button>
+    <button class="tool-btn" id="btn-reset-cam">🎦 Center View</button>
+  </div>
+
+  <!-- Spinning Progress / Status Indicator -->
+  <div class="spin-status-indicator" id="spin-indicator">
+    <div class="spinner-ring"></div>
+    <span id="spin-indicator-text">Mixing Balls & Agitating Air Vortex... (6s)</span>
+  </div>
+
+  <!-- Bottom Control Bar -->
+  <div class="bottom-controls">
+    <button class="btn-spin" id="btn-spin-select">
+      <span>🎲 SPIN & SELECT</span>
+    </button>
+    <button class="btn-secondary" id="btn-reset-all">
+      <span>🔄 Reset All</span>
+    </button>
+  </div>
+
+  <!-- Dramatic Winner Reveal Card -->
+  <div class="winner-overlay" id="winner-modal">
+    <div class="winner-card">
+      <div class="winner-tag">University Medical Classroom Selection</div>
+      <div class="winner-title">SELECTED ROLL NUMBER</div>
+      <div class="winner-roll-number" id="winner-number-display">--</div>
+      <div class="winner-sub" id="winner-details-text">
+        Ready for Anatomy & Histology Viva Voce presentation!
+      </div>
+      <div class="winner-btn-row">
+        <button class="btn-dismiss" id="btn-winner-continue">Continue / Spin Again</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- History Drawer -->
+  <div class="history-drawer" id="history-drawer">
+    <div class="drawer-header">
+      <h2>📜 Drawn Roll Numbers</h2>
+      <button class="btn-close-drawer" id="btn-close-drawer">&times;</button>
+    </div>
+    <div class="history-list-container" id="history-list">
+      <div class="history-empty-msg">No roll numbers drawn yet.<br>Click "SPIN & SELECT" to begin!</div>
+    </div>
+    <div class="drawer-footer">
+      <button class="btn-secondary" id="btn-copy-history" style="justify-content: center;">
+        📋 Copy Drawn Numbers
+      </button>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div class="toast-msg" id="toast-message">Notification</div>
+
+  <script>
+    /* =====================================================================
+       AUDIO SYNTHESIZER (Web Audio API - 100% Offline, No External Assets)
+       ===================================================================== */
+    class SoundEngine {
+      constructor() {
+        this.ctx = null;
+        this.muted = false;
+      }
+      init() {
+        if (!this.ctx) {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          if (AudioContext) {
+            this.ctx = new AudioContext();
+          }
+        }
+        if (this.ctx && this.ctx.state === 'suspended') {
+          this.ctx.resume();
+        }
+      }
+      playBlowerNoise(durationSec = 6.0) {
+        if (this.muted) return;
+        this.init();
+        if (!this.ctx) return;
+
+        const bufferSize = this.ctx.sampleRate * durationSec;
+        const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) {
+          data[i] = (Math.random() * 2 - 1) * 0.15;
+        }
+
+        const whiteNoise = this.ctx.createBufferSource();
+        whiteNoise.buffer = buffer;
+
+        // Bandpass filter for lottery blower rumble
+        const filter = this.ctx.createBiquadFilter();
+        filter.type = 'bandpass';
+        filter.frequency.setValueAtTime(320, this.ctx.currentTime);
+        filter.Q.setValueAtTime(2.5, this.ctx.currentTime);
+
+        const gainNode = this.ctx.createGain();
+        gainNode.gain.setValueAtTime(0.01, this.ctx.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.3, this.ctx.currentTime + 0.5);
+        gainNode.gain.exponentialRampToValueAtTime(0.25, this.ctx.currentTime + durationSec - 1.0);
+        gainNode.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + durationSec);
+
+        whiteNoise.connect(filter);
+        filter.connect(gainNode);
+        gainNode.connect(this.ctx.destination);
+
+        whiteNoise.start();
+        whiteNoise.stop(this.ctx.currentTime + durationSec);
+      }
+      playBallClick() {
+        if (this.muted) return;
+        this.init();
+        if (!this.ctx) return;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'triangle';
+        const freq = 600 + Math.random() * 800;
+        osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(100, this.ctx.currentTime + 0.05);
+
+        gain.gain.setValueAtTime(0.08, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.05);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start();
+        osc.stop(this.ctx.currentTime + 0.05);
+      }
+      playGateOpen() {
+        if (this.muted) return;
+        this.init();
+        if (!this.ctx) return;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(180, this.ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(350, this.ctx.currentTime + 0.3);
+
+        gain.gain.setValueAtTime(0.15, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.35);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start();
+        osc.stop(this.ctx.currentTime + 0.35);
+      }
+      playFanfare() {
+        if (this.muted) return;
+        this.init();
+        if (!this.ctx) return;
+        const notes = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
+        notes.forEach((freq, idx) => {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(freq, this.ctx.currentTime + idx * 0.12);
+
+          gain.gain.setValueAtTime(0, this.ctx.currentTime + idx * 0.12);
+          gain.gain.linearRampToValueAtTime(0.2, this.ctx.currentTime + idx * 0.12 + 0.03);
+          gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + idx * 0.12 + 0.6);
+
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(this.ctx.currentTime + idx * 0.12);
+          osc.stop(this.ctx.currentTime + idx * 0.12 + 0.65);
+        });
+      }
+    }
+
+    const sound = new SoundEngine();
+
+    /* =====================================================================
+       BALL COLOR PALETTE & PROCEDURAL TEXTURE GENERATION
+       ===================================================================== */
+    const BALL_COLORS = [
+      { bg: '#e11d48', ring: '#fda4af', name: 'Ruby' },       // 1
+      { bg: '#2563eb', ring: '#93c5fd', name: 'Sapphire' },   // 2
+      { bg: '#16a34a', ring: '#86efac', name: 'Emerald' },    // 3
+      { bg: '#d97706', ring: '#fde68a', name: 'Amber' },      // 4
+      { bg: '#7c3aed', ring: '#ddd6fe', name: 'Amethyst' },   // 5
+      { bg: '#0891b2', ring: '#a5f3fc', name: 'Teal' },       // 6
+      { bg: '#db2777', ring: '#fbcfe8', name: 'Rose' },       // 7
+      { bg: '#ea580c', ring: '#fed7aa', name: 'Tangerine' },  // 8
+      { bg: '#4f46e5', ring: '#c7d2fe', name: 'Indigo' },     // 9
+      { bg: '#059669', ring: '#6ee7b7', name: 'Mint' }        // 10
+    ];
+
+    function createBallTexture(number, colorObj) {
+      const canvas = document.createElement('canvas');
+      canvas.width = 512;
+      canvas.height = 256;
+      const ctx = canvas.getContext('2d');
+
+      // Background vibrant gradient
+      const grad = ctx.createLinearGradient(0, 0, 512, 256);
+      grad.addColorStop(0, colorObj.bg);
+      grad.addColorStop(1, '#0f172a');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, 512, 256);
+
+      // Subtle metallic highlight stripes
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.15)';
+      ctx.fillRect(0, 30, 512, 35);
+      ctx.fillRect(0, 190, 512, 35);
+
+      // Function to draw number badge
+      function drawBadge(cx, cy) {
+        // Outer glow/ring
+        ctx.beginPath();
+        ctx.arc(cx, cy, 75, 0, Math.PI * 2);
+        ctx.fillStyle = '#ffffff';
+        ctx.shadowColor = 'rgba(0,0,0,0.5)';
+        ctx.shadowBlur = 10;
+        ctx.fill();
+
+        // Inner decorative ring
+        ctx.beginPath();
+        ctx.arc(cx, cy, 66, 0, Math.PI * 2);
+        ctx.lineWidth = 4;
+        ctx.strokeStyle = colorObj.bg;
+        ctx.shadowBlur = 0;
+        ctx.stroke();
+
+        // Draw bold number
+        ctx.fillStyle = '#0f172a';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.font = '900 68px "Segoe UI", Arial, sans-serif';
+        ctx.fillText(number.toString(), cx, cy);
+
+        // Underline for 6 and 9 disambiguation
+        if (number === 6 || number === 9 || number === 16 || number === 19 || number === 26 || number === 29) {
+          ctx.beginPath();
+          ctx.arc(cx, cy + 32, 18, 0, Math.PI * 2);
+          ctx.fillStyle = colorObj.bg;
+          ctx.fill();
+        }
+      }
+
+      // Draw two badges on opposite sides of sphere equirectangular map
+      drawBadge(128, 128);
+      drawBadge(384, 128);
+
+      const texture = new THREE.CanvasTexture(canvas);
+      texture.wrapS = THREE.RepeatWrapping;
+      texture.wrapT = THREE.ClampToEdgeWrapping;
+      return texture;
+    }
+
+    /* =====================================================================
+       THREE.JS 3D SCENE SETUP
+       ===================================================================== */
+    const container = document.getElementById('webgl-canvas');
+    let scene, camera, renderer, controls;
+    let boxGroup, trapdoorMesh;
+    const balls = [];
+    const TOTAL_BALLS = 50;
+    const BOX_WIDTH = 10;
+    const BOX_HEIGHT = 10;
+    const BOX_DEPTH = 10;
+    const BALL_RADIUS = 0.58;
+    const HOLE_RADIUS = 1.3;
+
+    // State management
+    let remainingPool = [];
+    let drawnHistory = [];
+    let isSpinning = false;
+    let selectedBallObj = null;
+    let spinPhase = 'idle'; // 'idle', 'spinning', 'dispensing', 'reveal'
+    let spinTimer = 0;
+    let spinTotalDuration = 6.0;
+
+    // Pedestal position for winner ball
+    const PEDESTAL_Y = -6.5;
+    const PEDESTAL_Z = 0;
+
+    function initThree() {
+      // Scene
+      scene = new THREE.Scene();
+      scene.background = null; // transparent to show beautiful CSS gradient
+
+      // Camera
+      camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
+      camera.position.set(0, 2, 22);
+
+      // Renderer
+      renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.shadowMap.enabled = true;
+      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+      container.appendChild(renderer.domElement);
+
+      // Controls
+      if (typeof THREE.OrbitControls !== 'undefined') {
+        controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.maxDistance = 35;
+        controls.minDistance = 10;
+        controls.maxPolarAngle = Math.PI / 2 + 0.2;
+      }
+
+      // Lights
+      const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+      scene.add(ambientLight);
+
+      const keyLight = new THREE.DirectionalLight(0xfff3d6, 1.4);
+      keyLight.position.set(12, 18, 15);
+      keyLight.castShadow = true;
+      keyLight.shadow.mapSize.width = 1024;
+      keyLight.shadow.mapSize.height = 1024;
+      scene.add(keyLight);
+
+      const rimLight = new THREE.DirectionalLight(0x38bdf8, 1.0);
+      rimLight.position.set(-15, 10, -12);
+      scene.add(rimLight);
+
+      const bottomSpot = new THREE.SpotLight(0xffd700, 2.5, 20, Math.PI / 4, 0.4);
+      bottomSpot.position.set(0, -1, 4);
+      bottomSpot.target.position.set(0, PEDESTAL_Y, PEDESTAL_Z);
+      scene.add(bottomSpot);
+      scene.add(bottomSpot.target);
+
+      // Build 3D Objects
+      createLotteryMachine();
+      createAllBalls();
+
+      // Window resize
+      window.addEventListener('resize', onWindowResize, false);
+    }
+
+    function createLotteryMachine() {
+      boxGroup = new THREE.Group();
+
+      // 1. Transparent Glass Acrylic Box
+      // We build 5 glass planes (Front, Back, Left, Right, Top) + bottom funnel with hole
+      const glassMat = new THREE.MeshPhysicalMaterial({
+        color: 0x88ccff,
+        transparent: true,
+        opacity: 0.32,
+        roughness: 0.05,
+        metalness: 0.1,
+        transmission: 0.85,
+        ior: 1.45,
+        reflectivity: 0.7,
+        side: THREE.DoubleSide,
+        depthWrite: false
+      });
+
+      const wallGeo = new THREE.PlaneGeometry(BOX_WIDTH, BOX_HEIGHT);
+
+      // Back
+      const backWall = new THREE.Mesh(wallGeo, glassMat);
+      backWall.position.set(0, 0, -BOX_DEPTH / 2);
+      boxGroup.add(backWall);
+
+      // Front
+      const frontWall = new THREE.Mesh(wallGeo, glassMat);
+      frontWall.position.set(0, 0, BOX_DEPTH / 2);
+      boxGroup.add(frontWall);
+
+      // Left
+      const leftWall = new THREE.Mesh(wallGeo, glassMat);
+      leftWall.rotation.y = Math.PI / 2;
+      leftWall.position.set(-BOX_WIDTH / 2, 0, 0);
+      boxGroup.add(leftWall);
+
+      // Right
+      const rightWall = new THREE.Mesh(wallGeo, glassMat);
+      rightWall.rotation.y = -Math.PI / 2;
+      rightWall.position.set(BOX_WIDTH / 2, 0, 0);
+      boxGroup.add(rightWall);
+
+      // Top
+      const topWall = new THREE.Mesh(new THREE.PlaneGeometry(BOX_WIDTH, BOX_DEPTH), glassMat);
+      topWall.rotation.x = Math.PI / 2;
+      topWall.position.set(0, BOX_HEIGHT / 2, 0);
+      boxGroup.add(topWall);
+
+      // 2. Metallic Golden Framework & Corner Pillars
+      const frameMat = new THREE.MeshStandardMaterial({
+        color: 0xd4af37,
+        metalness: 0.88,
+        roughness: 0.22
+      });
+
+      const pillarGeo = new THREE.CylinderGeometry(0.2, 0.2, BOX_HEIGHT, 16);
+      const pillarOffsets = [
+        [-BOX_WIDTH / 2, 0, -BOX_DEPTH / 2],
+        [BOX_WIDTH / 2, 0, -BOX_DEPTH / 2],
+        [-BOX_WIDTH / 2, 0, BOX_DEPTH / 2],
+        [BOX_WIDTH / 2, 0, BOX_DEPTH / 2]
+      ];
+      pillarOffsets.forEach(([x, y, z]) => {
+        const pillar = new THREE.Mesh(pillarGeo, frameMat);
+        pillar.position.set(x, y, z);
+        boxGroup.add(pillar);
+      });
+
+      // Top & Bottom Rim Bevels
+      const rimGeoX = new THREE.BoxGeometry(BOX_WIDTH + 0.5, 0.35, 0.35);
+      const rimGeoZ = new THREE.BoxGeometry(0.35, 0.35, BOX_DEPTH + 0.5);
+
+      [BOX_HEIGHT / 2, -BOX_HEIGHT / 2].forEach(yPos => {
+        const r1 = new THREE.Mesh(rimGeoX, frameMat);
+        r1.position.set(0, yPos, -BOX_DEPTH / 2);
+        boxGroup.add(r1);
+        const r2 = new THREE.Mesh(rimGeoX, frameMat);
+        r2.position.set(0, yPos, BOX_DEPTH / 2);
+        boxGroup.add(r2);
+        const r3 = new THREE.Mesh(rimGeoZ, frameMat);
+        r3.position.set(-BOX_WIDTH / 2, yPos, 0);
+        boxGroup.add(r3);
+        const r4 = new THREE.Mesh(rimGeoZ, frameMat);
+        r4.position.set(BOX_WIDTH / 2, yPos, 0);
+        boxGroup.add(r4);
+      });
+
+      // 3. Bottom Base Plate with Circular Dispensing Hole
+      // We create a floor ring around the hole
+      const floorRingGeo = new THREE.RingGeometry(HOLE_RADIUS, BOX_WIDTH / 1.414, 32);
+      const floorRing = new THREE.Mesh(floorRingGeo, new THREE.MeshStandardMaterial({
+        color: 0x1e293b,
+        metalness: 0.7,
+        roughness: 0.3,
+        side: THREE.DoubleSide
+      }));
+      floorRing.rotation.x = -Math.PI / 2;
+      floorRing.position.set(0, -BOX_HEIGHT / 2, 0);
+      boxGroup.add(floorRing);
+
+      // Gold rim around the dispensing hole
+      const holeRimGeo = new THREE.TorusGeometry(HOLE_RADIUS, 0.12, 16, 32);
+      const holeRim = new THREE.Mesh(holeRimGeo, frameMat);
+      holeRim.rotation.x = Math.PI / 2;
+      holeRim.position.set(0, -BOX_HEIGHT / 2, 0);
+      boxGroup.add(holeRim);
+
+      // 4. Motorized Mechanical Trapdoor Gate
+      // A circular disk that hinges open downwards
+      const gateGeo = new THREE.CylinderGeometry(HOLE_RADIUS * 0.98, HOLE_RADIUS * 0.98, 0.1, 32);
+      const gateMat = new THREE.MeshStandardMaterial({
+        color: 0xd4af37,
+        metalness: 0.9,
+        roughness: 0.2
+      });
+      trapdoorMesh = new THREE.Group();
+      const disc = new THREE.Mesh(gateGeo, gateMat);
+      disc.position.set(HOLE_RADIUS * 0.9, 0, 0); // offset so pivot is at rim
+      trapdoorMesh.add(disc);
+      trapdoorMesh.position.set(-HOLE_RADIUS * 0.9, -BOX_HEIGHT / 2 - 0.1, 0);
+      boxGroup.add(trapdoorMesh);
+
+      // 5. Lower Dispensing Guide Chute & Golden Velvet Pedestal
+      const pedestalGroup = new THREE.Group();
+
+      // Golden Ring Stand
+      const standGeo = new THREE.CylinderGeometry(2.4, 2.6, 0.4, 32);
+      const standMesh = new THREE.Mesh(standGeo, frameMat);
+      standMesh.position.set(0, PEDESTAL_Y, PEDESTAL_Z);
+      pedestalGroup.add(standMesh);
+
+      // Velvet Cushion Pad
+      const cushionGeo = new THREE.CylinderGeometry(2.1, 2.1, 0.1, 32);
+      const cushionMat = new THREE.MeshStandardMaterial({
+        color: 0x0f172a,
+        roughness: 0.9,
+        metalness: 0.1
+      });
+      const cushionMesh = new THREE.Mesh(cushionGeo, cushionMat);
+      cushionMesh.position.set(0, PEDESTAL_Y + 0.22, PEDESTAL_Z);
+      pedestalGroup.add(cushionMesh);
+
+      // Acrylic Dispenser Chute Columns
+      const chutePillarGeo = new THREE.CylinderGeometry(0.12, 0.12, 1.4, 16);
+      [-1.3, 1.3].forEach(px => {
+        [-1.3, 1.3].forEach(pz => {
+          const cp = new THREE.Mesh(chutePillarGeo, frameMat);
+          cp.position.set(px, -BOX_HEIGHT / 2 - 0.7, pz);
+          pedestalGroup.add(cp);
+        });
+      });
+
+      boxGroup.add(pedestalGroup);
+      scene.add(boxGroup);
+    }
+
+    function createAllBalls() {
+      const ballGeo = new THREE.SphereGeometry(BALL_RADIUS, 32, 32);
+
+      for (let i = 1; i <= TOTAL_BALLS; i++) {
+        const colorObj = BALL_COLORS[(i - 1) % BALL_COLORS.length];
+        const texture = createBallTexture(i, colorObj);
+
+        const mat = new THREE.MeshStandardMaterial({
+          map: texture,
+          roughness: 0.25,
+          metalness: 0.35
+        });
+
+        const mesh = new THREE.Mesh(ballGeo, mat);
+        mesh.castShadow = true;
+        mesh.receiveShadow = true;
+
+        // Spread balls inside bottom half of box
+        const x = (Math.random() - 0.5) * (BOX_WIDTH - 2.5);
+        const y = -BOX_HEIGHT / 2 + BALL_RADIUS + 0.2 + (i / TOTAL_BALLS) * 4.5;
+        const z = (Math.random() - 0.5) * (BOX_DEPTH - 2.5);
+
+        mesh.position.set(x, y, z);
+        mesh.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, 0);
+
+        scene.add(mesh);
+
+        balls.push({
+          number: i,
+          mesh: mesh,
+          colorObj: colorObj,
+          vx: (Math.random() - 0.5) * 0.1,
+          vy: 0,
+          vz: (Math.random() - 0.5) * 0.1,
+          rotVx: (Math.random() - 0.5) * 0.05,
+          rotVy: (Math.random() - 0.5) * 0.05,
+          isDispensed: false,
+          isSelectedForDispense: false,
+          dispenseTime: 0
+        });
+      }
+
+      // Initialize remaining pool
+      resetPool();
+    }
+
+    function resetPool() {
+      remainingPool = [];
+      for (let i = 1; i <= TOTAL_BALLS; i++) {
+        remainingPool.push(i);
+      }
+      drawnHistory = [];
+      updateUI();
+    }
+
+    /* =====================================================================
+       PHYSICS & SIMULATION LOOP
+       ===================================================================== */
+    function updatePhysics(dt) {
+      const halfW = BOX_WIDTH / 2 - BALL_RADIUS;
+      const halfH = BOX_HEIGHT / 2 - BALL_RADIUS;
+      const halfD = BOX_DEPTH / 2 - BALL_RADIUS;
+      const floorY = -BOX_HEIGHT / 2 + BALL_RADIUS;
+
+      // Handle Trapdoor Gate Animation
+      if (spinPhase === 'dispensing' || spinPhase === 'reveal') {
+        // Swing trapdoor open (rotate around Z axis)
+        if (trapdoorMesh.rotation.z < Math.PI * 0.55) {
+          trapdoorMesh.rotation.z += dt * 3.5;
+        }
+      } else {
+        // Closed gate
+        if (trapdoorMesh.rotation.z > 0) {
+          trapdoorMesh.rotation.z -= dt * 4;
+          if (trapdoorMesh.rotation.z < 0) trapdoorMesh.rotation.z = 0;
+        }
+      }
+
+      // Physics loop for each ball
+      for (let i = 0; i < balls.length; i++) {
+        const b = balls[i];
+
+        // 1. Dispensed Winning Ball
+        if (b.isDispensed) {
+          if (b.dispensePhase === 'falling') {
+            b.vy -= 18.0 * dt; // gravity
+            b.mesh.position.y += b.vy * dt;
+            b.mesh.position.x += (0 - b.mesh.position.x) * dt * 4; // center X
+            b.mesh.position.z += (PEDESTAL_Z - b.mesh.position.z) * dt * 4; // center Z
+
+            // Hit pedestal floor
+            const targetY = PEDESTAL_Y + 0.35 + BALL_RADIUS;
+            if (b.mesh.position.y <= targetY) {
+              b.mesh.position.y = targetY;
+              b.vy = -b.vy * 0.45; // bounce damping
+              sound.playBallClick();
+              if (Math.abs(b.vy) < 0.6) {
+                b.vy = 0;
+                b.dispensePhase = 'settled';
+                onBallSettled(b);
+              }
+            }
+          } else if (b.dispensePhase === 'settled') {
+            // Slowly rotate winning ball on pedestal to showcase number
+            b.mesh.rotation.y += dt * 0.8;
+          }
+          continue;
+        }
+
+        // 2. Ball Guided into Hole during Dispense
+        if (b.isSelectedForDispense && spinPhase === 'dispensing') {
+          // Attract smoothly to central hole (x=0, z=0, y=floorY)
+          b.mesh.position.x += (0 - b.mesh.position.x) * dt * 6;
+          b.mesh.position.z += (0 - b.mesh.position.z) * dt * 6;
+          b.mesh.position.y -= 7.0 * dt;
+
+          b.mesh.rotation.x += b.rotVx;
+          b.mesh.rotation.y += b.rotVy;
+
+          // Once it crosses the hole boundary
+          if (b.mesh.position.y < -BOX_HEIGHT / 2 - 0.2) {
+            b.isDispensed = true;
+            b.dispensePhase = 'falling';
+            b.vy = -2.5;
+            sound.playGateOpen();
+          }
+          continue;
+        }
+
+        // 3. Regular Balls (Mixing Vortex or Resting Gravity)
+        if (isSpinning) {
+          // Blower vortex forces!
+          // Helical swirl around Y axis + upward jet
+          const distXZ = Math.sqrt(b.mesh.position.x * b.mesh.position.x + b.mesh.position.z * b.mesh.position.z);
+          const angle = Math.atan2(b.mesh.position.z, b.mesh.position.x);
+
+          // Swirl impulse
+          const swirlSpeed = 9.0;
+          b.vx += -Math.sin(angle) * swirlSpeed * dt + (Math.random() - 0.5) * 8.0 * dt;
+          b.vz += Math.cos(angle) * swirlSpeed * dt + (Math.random() - 0.5) * 8.0 * dt;
+
+          // Upward air turbulence
+          b.vy += 14.0 * dt + (Math.random() - 0.45) * 6.0 * dt;
+
+          // Drag / damping
+          b.vx *= 0.96;
+          b.vy *= 0.96;
+          b.vz *= 0.96;
+        } else {
+          // Standard gravity settling
+          b.vy -= 16.0 * dt;
+          b.vx *= 0.92;
+          b.vz *= 0.92;
+        }
+
+        // Integrate position
+        b.mesh.position.x += b.vx * dt;
+        b.mesh.position.y += b.vy * dt;
+        b.mesh.position.z += b.vz * dt;
+
+        // Rotate tumbling
+        b.mesh.rotation.x += b.rotVx;
+        b.mesh.rotation.y += b.rotVy;
+
+        // Wall collisions
+        // X walls
+        if (b.mesh.position.x > halfW) {
+          b.mesh.position.x = halfW;
+          b.vx = -b.vx * 0.75;
+          if (Math.abs(b.vx) > 0.4) sound.playBallClick();
+        } else if (b.mesh.position.x < -halfW) {
+          b.mesh.position.x = -halfW;
+          b.vx = -b.vx * 0.75;
+          if (Math.abs(b.vx) > 0.4) sound.playBallClick();
+        }
+
+        // Z walls
+        if (b.mesh.position.z > halfD) {
+          b.mesh.position.z = halfD;
+          b.vz = -b.vz * 0.75;
+          if (Math.abs(b.vz) > 0.4) sound.playBallClick();
+        } else if (b.mesh.position.z < -halfD) {
+          b.mesh.position.z = -halfD;
+          b.vz = -b.vz * 0.75;
+          if (Math.abs(b.vz) > 0.4) sound.playBallClick();
+        }
+
+        // Top wall
+        if (b.mesh.position.y > halfH) {
+          b.mesh.position.y = halfH;
+          b.vy = -b.vy * 0.6;
+        }
+
+        // Floor collision
+        if (b.mesh.position.y < floorY) {
+          b.mesh.position.y = floorY;
+          b.vy = -b.vy * 0.55;
+          if (Math.abs(b.vy) > 0.4) sound.playBallClick();
+        }
+
+        // Sphere-to-sphere collision (approximate neighbors check)
+        for (let j = i + 1; j < balls.length; j++) {
+          const b2 = balls[j];
+          if (b2.isDispensed) continue;
+
+          const dx = b2.mesh.position.x - b.mesh.position.x;
+          const dy = b2.mesh.position.y - b.mesh.position.y;
+          const dz = b2.mesh.position.z - b.mesh.position.z;
+          const distSq = dx * dx + dy * dy + dz * dz;
+          const minDist = BALL_RADIUS * 2;
+
+          if (distSq < minDist * minDist && distSq > 0.0001) {
+            const dist = Math.sqrt(distSq);
+            const nx = dx / dist;
+            const ny = dy / dist;
+            const nz = dz / dist;
+            const overlap = (minDist - dist) * 0.5;
+
+            // Separate
+            b.mesh.position.x -= nx * overlap;
+            b.mesh.position.y -= ny * overlap;
+            b.mesh.position.z -= nz * overlap;
+            b2.mesh.position.x += nx * overlap;
+            b2.mesh.position.y += ny * overlap;
+            b2.mesh.position.z += nz * overlap;
+
+            // Simple velocity exchange impulse
+            const p = 2 * (b.vx * nx + b.vy * ny + b.vz * nz - b2.vx * nx - b2.vy * ny - b2.vz * nz) / 2;
+            b.vx -= p * nx * 0.8;
+            b.vy -= p * ny * 0.8;
+            b.vz -= p * nz * 0.8;
+            b2.vx += p * nx * 0.8;
+            b2.vy += p * ny * 0.8;
+            b2.vz += p * nz * 0.8;
+          }
+        }
+      }
+    }
+
+    /* =====================================================================
+       ANIMATION LOOP
+       ===================================================================== */
+    let lastTime = performance.now();
+
+    function animate() {
+      requestAnimationFrame(animate);
+
+      const now = performance.now();
+      const dt = Math.min((now - lastTime) / 1000, 0.1);
+      lastTime = now;
+
+      // Spin countdown logic
+      if (isSpinning) {
+        spinTimer -= dt;
+        const progress = Math.max(0, Math.ceil(spinTimer));
+        document.getElementById('spin-indicator-text').innerText =
+          `Mixing Balls & Agitating Air Vortex... (${progress}s)`;
+
+        if (spinTimer <= 0) {
+          finishSpinningAndSelect();
+        }
+      }
+
+      // Camera zoom interpolation during reveal
+      if (spinPhase === 'reveal') {
+        const targetCamY = PEDESTAL_Y + 1.2;
+        const targetCamZ = 12.0;
+        camera.position.y += (targetCamY - camera.position.y) * dt * 2.5;
+        camera.position.z += (targetCamZ - camera.position.z) * dt * 2.5;
+        if (controls) {
+          controls.target.set(0, PEDESTAL_Y + 0.6, PEDESTAL_Z);
+        }
+      }
+
+      updatePhysics(dt);
+
+      if (controls) controls.update();
+      renderer.render(scene, camera);
+    }
+
+    /* =====================================================================
+       SPIN & SELECTION CONTROLLER
+       ===================================================================== */
+    function startSpinAndSelect() {
+      if (isSpinning || spinPhase === 'dispensing') return;
+
+      if (remainingPool.length === 0) {
+        showToast("All 50 roll numbers have been drawn! Reset to begin anew.");
+        return;
+      }
+
+      // Hide any previous winner modal
+      document.getElementById('winner-modal').classList.remove('active');
+
+      // Put any previously dispensed ball into side collection tray
+      if (selectedBallObj && selectedBallObj.isDispensed) {
+        selectedBallObj.mesh.position.set(
+          -7.5 + (drawnHistory.length % 5) * 1.3,
+          -6.0 + Math.floor(drawnHistory.length / 5) * 1.3,
+          -2
+        );
+      }
+
+      isSpinning = true;
+      spinPhase = 'spinning';
+      spinTotalDuration = 5.5 + Math.random() * 1.5; // 5 to 7 seconds realistic
+      spinTimer = spinTotalDuration;
+
+      // Update UI
+      document.getElementById('btn-spin-select').disabled = true;
+      document.getElementById('btn-reset-all').disabled = true;
+      document.getElementById('spin-indicator').style.display = 'flex';
+
+      // Start audio noise & vortex
+      sound.playBlowerNoise(spinTotalDuration);
+    }
+
+    function finishSpinningAndSelect() {
+      isSpinning = false;
+      document.getElementById('spin-indicator').style.display = 'none';
+
+      // Pick randomly from remaining unselected pool
+      const poolIndex = Math.floor(Math.random() * remainingPool.length);
+      const chosenRollNumber = remainingPool.splice(poolIndex, 1)[0];
+
+      // Find ball object
+      selectedBallObj = balls.find(b => b.number === chosenRollNumber);
+      selectedBallObj.isSelectedForDispense = true;
+
+      spinPhase = 'dispensing';
+      showToast(`Selected Ball #${chosenRollNumber} entering dispensing chute...`);
+    }
+
+    function onBallSettled(ballObj) {
+      spinPhase = 'reveal';
+
+      // Celebrate!
+      sound.playFanfare();
+
+      // Confetti burst
+      if (typeof confetti === 'function') {
+        confetti({
+          particleCount: 120,
+          spread: 80,
+          origin: { y: 0.6 },
+          colors: ['#ffd700', '#f59e0b', '#38bdf8', '#ef4444', '#10b981']
+        });
+      }
+
+      // Add to history
+      drawnHistory.push(ballObj.number);
+      addHistoryItem(ballObj);
+
+      // Display dramatic winner overlay
+      document.getElementById('winner-number-display').innerText = ballObj.number;
+      document.getElementById('winner-details-text').innerText =
+        `Roll Number ${ballObj.number} is selected for the Anatomy & Histology Presentation!`;
+      document.getElementById('winner-modal').classList.add('active');
+
+      // Update UI buttons
+      document.getElementById('btn-spin-select').disabled = false;
+      document.getElementById('btn-reset-all').disabled = false;
+      document.getElementById('btn-spin-select').innerHTML = '<span>🎲 SPIN AGAIN</span>';
+
+      updateUI();
+    }
+
+    function updateUI() {
+      const remainingCount = remainingPool.length;
+      document.getElementById('remaining-count-badge').innerText = `${remainingCount} / ${TOTAL_BALLS} Remaining`;
+      document.getElementById('history-counter').innerText = drawnHistory.length;
+
+      if (remainingCount === 0) {
+        document.getElementById('btn-spin-select').disabled = true;
+        document.getElementById('btn-spin-select').innerHTML = '<span>🎉 ALL 50 DRAWN</span>';
+      }
+    }
+
+    function addHistoryItem(ballObj) {
+      const list = document.getElementById('history-list');
+      const emptyMsg = list.querySelector('.history-empty-msg');
+      if (emptyMsg) emptyMsg.remove();
+
+      const chip = document.createElement('div');
+      chip.className = 'history-chip';
+      chip.innerHTML = `
+        <div>
+          <span class="ball-color-dot" style="background:${ballObj.colorObj.bg}"></span>
+          <span class="draw-order">Draw #${drawnHistory.length}</span>
+        </div>
+        <div class="roll-num">#${ballObj.number}</div>
+      `;
+      list.prepend(chip);
+    }
+
+    function resetAllBalls() {
+      if (isSpinning) return;
+      if (!confirm("Are you sure you want to reset all 50 roll numbers?")) return;
+
+      // Close modal
+      document.getElementById('winner-modal').classList.remove('active');
+
+      // Reset camera
+      resetCamera();
+
+      // Reset trapdoor
+      trapdoorMesh.rotation.z = 0;
+      spinPhase = 'idle';
+      selectedBallObj = null;
+
+      // Reset all balls positions inside box
+      balls.forEach((b, i) => {
+        b.isDispensed = false;
+        b.isSelectedForDispense = false;
+        b.dispensePhase = null;
+        b.vx = (Math.random() - 0.5) * 0.1;
+        b.vy = 0;
+        b.vz = (Math.random() - 0.5) * 0.1;
+
+        const x = (Math.random() - 0.5) * (BOX_WIDTH - 2.5);
+        const y = -BOX_HEIGHT / 2 + BALL_RADIUS + 0.2 + (i / TOTAL_BALLS) * 4.5;
+        const z = (Math.random() - 0.5) * (BOX_DEPTH - 2.5);
+        b.mesh.position.set(x, y, z);
+      });
+
+      resetPool();
+
+      // Clear history UI
+      document.getElementById('history-list').innerHTML =
+        '<div class="history-empty-msg">No roll numbers drawn yet.<br>Click "SPIN & SELECT" to begin!</div>';
+      document.getElementById('btn-spin-select').disabled = false;
+      document.getElementById('btn-spin-select').innerHTML = '<span>🎲 SPIN & SELECT</span>';
+
+      showToast("Reset complete! All 50 balls are back in the lottery box.");
+    }
+
+    function resetCamera() {
+      camera.position.set(0, 2, 22);
+      if (controls) {
+        controls.target.set(0, 0, 0);
+      }
+    }
+
+    function showToast(msg) {
+      const toast = document.getElementById('toast-message');
+      toast.innerText = msg;
+      toast.classList.add('show');
+      setTimeout(() => {
+        toast.classList.remove('show');
+      }, 3500);
+    }
+
+    function onWindowResize() {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+
+    /* =====================================================================
+       EVENT LISTENERS
+       ===================================================================== */
+    document.getElementById('btn-spin-select').addEventListener('click', () => {
+      sound.init();
+      startSpinAndSelect();
+    });
+
+    document.getElementById('btn-winner-continue').addEventListener('click', () => {
+      document.getElementById('winner-modal').classList.remove('active');
+      resetCamera();
+    });
+
+    document.getElementById('btn-reset-all').addEventListener('click', resetAllBalls);
+
+    document.getElementById('btn-reset-cam').addEventListener('click', resetCamera);
+
+    document.getElementById('btn-toggle-sound').addEventListener('click', function() {
+      sound.muted = !sound.muted;
+      this.innerText = sound.muted ? "🔇 Sound: OFF" : "🔊 Sound: ON";
+    });
+
+    document.getElementById('btn-toggle-history').addEventListener('click', () => {
+      document.getElementById('history-drawer').classList.toggle('open');
+    });
+
+    document.getElementById('btn-close-drawer').addEventListener('click', () => {
+      document.getElementById('history-drawer').classList.remove('open');
+    });
+
+    document.getElementById('btn-copy-history').addEventListener('click', () => {
+      if (drawnHistory.length === 0) {
+        showToast("No drawn numbers to copy!");
+        return;
+      }
+      const text = "Drawn Roll Numbers (" + drawnHistory.length + "/50):\n" + drawnHistory.join(', ');
+      navigator.clipboard.writeText(text).then(() => {
+        showToast("Copied drawn numbers to clipboard!");
+      });
+    });
+
+    // Keyboard shortcuts: Spacebar to spin
+    window.addEventListener('keydown', (e) => {
+      if (e.code === 'Space' && !isSpinning) {
+        e.preventDefault();
+        sound.init();
+        startSpinAndSelect();
+      }
+      if (e.code === 'Escape') {
+        document.getElementById('winner-modal').classList.remove('active');
+        document.getElementById('history-drawer').classList.remove('open');
+      }
+    });
+
+    // Start scene
+    window.onload = () => {
+      initThree();
+      animate();
+    };
+  </script>
+</body>
+</html>
